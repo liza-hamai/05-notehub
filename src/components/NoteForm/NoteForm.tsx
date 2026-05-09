@@ -2,6 +2,8 @@ import css from "./NoteForm.module.css"
 import * as Yup from 'yup';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import type { NoteTag } from "../../types/note";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createNote } from "../../services/noteService";
 
 const validationSchema = Yup.object({
     title: Yup.string().min(3, 'Мінімум 3 символи').max(50, 'Максимум 50 символів').required('Обовязкове поле'),
@@ -10,16 +12,28 @@ const validationSchema = Yup.object({
 });
 
 interface NoteFormProps {
-    onSubmit: (values: { title: string; content: string; tag: NoteTag }) => void;
     onClose: () => void;
 }
 
-export default function NoteForm({ onSubmit, onClose }: NoteFormProps) {
+export default function NoteForm({ onClose }: NoteFormProps) {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: createNote,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['note'] });
+            onClose();
+        }
+    });
+
+    const handleSubmit = (values: { title: string; content: string; tag: NoteTag }) => {
+        mutation.mutate(values);
+    };
     return (
         <Formik
             initialValues={{ title: '', content: '', tag: 'Todo' }}
             validationSchema={validationSchema}
-            onSubmit={onSubmit}
+            onSubmit={handleSubmit}
         >
             <Form className={css.form}>
                 <div className={css.formGroup}>
